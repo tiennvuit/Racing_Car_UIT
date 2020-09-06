@@ -1,0 +1,13 @@
+numpy
+python-socketio
+eventlet
+opencv-python
+pillow
+flask
+keras
+tensorflow
+matplotlib	
+
+
+
+
