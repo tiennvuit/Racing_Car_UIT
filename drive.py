@@ -49,9 +49,6 @@ def telemetry(sid, data):
         image = np.asarray(image)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-        # cv2.imshow("Current frame", image)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
 
         """
         - Chương trình đưa cho bạn 3 giá trị đầu vào:
@@ -72,8 +69,16 @@ def telemetry(sid, data):
             #------------------------------------------  Work space  ----------------------------------------------#
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+            cv2.imshow("Origin frame", image)
+            cv2.imshow("Gray frame", img_gray)
+
+            cv2.waitKey(1)
+
             image = utils.preprocess(image)
             image = np.array([image])
+
 
             steering_angle = float(model.predict(image, batch_size=1))
 
@@ -95,6 +100,7 @@ def telemetry(sid, data):
             print('{} : {}'.format(sendBack_angle, sendBack_Speed))
             send_control(sendBack_angle, sendBack_Speed)
         except Exception as e:
+            cv2.destroyAllWindows()
             print(e)
     else:
         sio.emit('manual', data={}, skip_sid=True)
