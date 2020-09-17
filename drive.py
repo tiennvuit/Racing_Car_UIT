@@ -13,9 +13,7 @@ from io import BytesIO
 from keras.models import load_model
 import argparse
 import utils
-from process_image import CannyEdge, region_of_interest, display_lines, average_slope_intercept
-import matplotlib.pyplot as plt
-
+import os
 #--------------------------------------#
 
 #Global variable
@@ -30,6 +28,13 @@ MIN_SPEED = 15
 model = None
 prev_image_array = None
 
+
+# My team define
+previous_image = None
+save_image_path = "data/train/train_map1"
+grouth_truth = "data/train/grouth_truth/grouth_truth_map1.txt"
+index = 0
+
 #initialize our server
 sio = socketio.Server()
 #our flask (web) app
@@ -37,20 +42,28 @@ app = Flask(__name__)
 #registering event handler for the server
 @sio.on('telemetry')
 def telemetry(sid, data):
+    
+    global index
+    global previous_image
+
     if data:
 
         steering_angle = 0  #Góc lái hiện tại của xe
         speed = 0           #Vận tốc hiện tại của xe
         image = 0           #Ảnh gốc
 
-
         steering_angle = float(data["steering_angle"])
         speed = float(data["speed"])
+
         #Original Image
         image = Image.open(BytesIO(base64.b64decode(data["image"])))
         image = np.asarray(image)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
+        # store label
+        if index % 5 == 0:
+            with open(grouth_truth, 'a+') as f:
+                f.write("{}, {}, {}\n".format("{:08d}".format(index), steering_angle, speed))
 
         """
         - Chương trình đưa cho bạn 3 giá trị đầu vào:
@@ -70,53 +83,57 @@ def telemetry(sid, data):
         try:
             #------------------------------------------  Work space  ----------------------------------------------#
 
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            # img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
-            # cannyImage = cv2.Canny(blur, 50, 150)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            
+            # store data image
+            if index % 5 == 0:
+                try:
+                    name = os.path.join(save_image_path, "{:08d}.png".format(index))
+                    cv2.imwrite(name, previous_image)
+                except:
+                    pass
 
-            # (thresh, im_bw) = cv2.threshold(img_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+            previous_image = img_gray.copy()
 
+            index = index + 1
 
-            # cv2.imshow("Origin frame", image)
-            # cv2.imshow("Gray frame", img_gray)
-            # cv2.imshow("Denoising gray", blur)
-            # cv2.imshow("Detect edge", cannyImage)            
-            # cv2.imshow("Binary frame", im_bw)
-
-            frame = image
-
-
-
-
-            cv2.waitKey(1)
+            cv2.imshow("Origin frame", image)
+            cv2.imshow("Gray frame", img_gray)
 
             image = utils.preprocess(image)
 
-            #cv2.imshow("Utils image", image)
+            cv2.imshow("Utils image", image)
+            cv2.waitKey(1)
+
 
             image = np.array([image])
 
 
-            steering_angle = float(model.predict(image, batch_size=1))
+            # try:
+            #     steering_angle = float(model.predict(image, batch_size=1))
+            # except:
+            #     pass
 
-            # Tốc độ ta để trong khoảng từ 10 đến 25
-            global speed_limit
-            if speed > speed_limit:
-                speed_limit = MIN_SPEED  # giảm tốc độ
-            else:
-                speed_limit = MAX_SPEED
-            throttle = 1.0 - steering_angle**2 - (speed/speed_limit)**2
+            # # Tốc độ ta để trong khoảng từ 10 đến 25
+            # global speed_limit
+            # if speed > speed_limit:
+            #     speed_limit = MIN_SPEED  # giảm tốc độ
+            # else:
+            #     speed_limit = MAX_SPEED
+            # throttle = 1.0 - steering_angle**2 - (speed/speed_limit)**2
 
 
-            sendBack_angle = steering_angle*MAX_ANGLE
-            sendBack_Speed = throttle*MAX_SPEED
+            # sendBack_angle = steering_angle*MAX_ANGLE
+            # sendBack_Speed = throttle*MAX_SPEED
 
             
 
             #------------------------------------------------------------------------------------------------------#
             print('{} : {}'.format(sendBack_angle, sendBack_Speed))
             send_control(sendBack_angle, sendBack_Speed)
+
+
         except Exception as e:
             cv2.destroyAllWindows()
             print(e)
@@ -156,11 +173,20 @@ if __name__ == '__main__':
         default='',
         help='Path to image folder. This is where the images from the run will be saved.'
     )
-    args = parser.parse_args()
+
+    # parser.add_argument(
+    #     'data_output', type=str, default='data/train/', help="The path store image data"
+    # )
+    # parser.add_argument(
+    #     'grouth_truth', type=str, default='data/grouth_truth.txt', help="The grouth truth file store labels"
+    # )
+    # args = parser.parse_args()
 
     # Load model mà ta đã train được từ bước trước
-    model = load_model(args.model)
-
+    try:
+        model = load_model(args.model)
+    except:
+        print("Not found trained model")
     #--------------------------------------------------------------------------------------#
     # wrap Flask application with engineio's middleware
     app = socketio.Middleware(sio, app)
