@@ -13,6 +13,8 @@ from io import BytesIO
 from keras.models import load_model
 import argparse
 import utils
+from process_image import CannyEdge, region_of_interest, display_lines, average_slope_intercept
+import matplotlib.pyplot as plt
 
 #--------------------------------------#
 
@@ -68,15 +70,31 @@ def telemetry(sid, data):
         try:
             #------------------------------------------  Work space  ----------------------------------------------#
 
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
+            # cannyImage = cv2.Canny(blur, 50, 150)
 
-            cv2.imshow("Origin frame", image)
-            cv2.imshow("Gray frame", img_gray)
+            # (thresh, im_bw) = cv2.threshold(img_gray, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+
+            # cv2.imshow("Origin frame", image)
+            # cv2.imshow("Gray frame", img_gray)
+            # cv2.imshow("Denoising gray", blur)
+            # cv2.imshow("Detect edge", cannyImage)            
+            # cv2.imshow("Binary frame", im_bw)
+
+            frame = image
+
+
+
 
             cv2.waitKey(1)
 
             image = utils.preprocess(image)
+
+            #cv2.imshow("Utils image", image)
+
             image = np.array([image])
 
 
@@ -94,7 +112,7 @@ def telemetry(sid, data):
             sendBack_angle = steering_angle*MAX_ANGLE
             sendBack_Speed = throttle*MAX_SPEED
 
-            cv2.waitKey(1)
+            
 
             #------------------------------------------------------------------------------------------------------#
             print('{} : {}'.format(sendBack_angle, sendBack_Speed))
