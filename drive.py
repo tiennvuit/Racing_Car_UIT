@@ -1,4 +1,4 @@
-import base64
+﻿import base64
 import numpy as np
 import socketio
 import eventlet
