@@ -27,7 +27,8 @@ MIN_SPEED = 15
 #init our model and image array as empty
 model = None
 prev_image_array = None
-
+previous_angle = 0
+previous_speed = 0
 
 # My team define
 previous_image = None
@@ -45,6 +46,8 @@ def telemetry(sid, data):
     
     global index
     global previous_image
+    global previous_angle
+    global previous_speed
 
     if data:
 
@@ -63,8 +66,14 @@ def telemetry(sid, data):
         # store label
         if index % 5 == 0:
             with open(grouth_truth, 'a+') as f:
-                f.write("{}, {}, {}\n".format("{:08d}".format(index), steering_angle, speed))
+                f.write("{}, {}, {}, {}, {}\n".format("{:08d}".format(index), 
+                    previous_angle, previous_speed, steering_angle, speed))
 
+        previous_angle = steering_angle
+        previous_speed = speed
+
+        print("{} --> Previous: {}-{}, Current: {}-{}\n".format("{:08d}".format(index), 
+                    previous_angle, previous_speed, steering_angle, speed))
         """
         - Chương trình đưa cho bạn 3 giá trị đầu vào:
             * steering_angle: góc lái hiện tại của xe
@@ -84,8 +93,9 @@ def telemetry(sid, data):
             #------------------------------------------  Work space  ----------------------------------------------#
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            
+            #img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            image = utils.preprocess(image)
+
             # store data image
             if index % 5 == 0:
                 try:
@@ -94,15 +104,12 @@ def telemetry(sid, data):
                 except:
                     pass
 
-            previous_image = img_gray.copy()
+            previous_image = image.copy()
 
             index = index + 1
 
             cv2.imshow("Origin frame", image)
-            cv2.imshow("Gray frame", img_gray)
-
-            image = utils.preprocess(image)
-
+            #cv2.imshow("Gray frame", img_gray)
             cv2.imshow("Utils image", image)
             cv2.waitKey(1)
 
@@ -192,3 +199,4 @@ if __name__ == '__main__':
     app = socketio.Middleware(sio, app)
     # deploy as an eventlet WSGI server
     eventlet.wsgi.server(eventlet.listen(('', 4567)), app)
+    cv2.destroyAllWindows()
